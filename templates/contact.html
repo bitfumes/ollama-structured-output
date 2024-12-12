@@ -28,6 +28,25 @@
                         placeholder="John Doe&#10;john@example.com&#10;General Inquiry&#10;Hello, I would like more information.&#10;+1234567890"></textarea>
                 </div>
 
+                <div class="space-y-2">
+                    <label for="imageUpload"
+                        class="block text-sm font-medium text-gray-700">Attach
+                        Image (optional)</label>
+                    <div class="flex items-center gap-4">
+                        <input type="file" id="imageUpload" accept="image/*"
+                            class="block w-full text-sm text-gray-500
+                                      file:mr-4 file:py-2 file:px-4
+                                      file:rounded-md file:border-0
+                                      file:text-sm file:font-semibold
+                                      file:bg-blue-50 file:text-blue-700
+                                      hover:file:bg-blue-100"
+                            onchange="handleImageUpload(event)" />
+                        <img id="imagePreview"
+                            class="hidden h-20 w-20 object-cover rounded-lg border border-gray-200"
+                            alt="Preview" />
+                    </div>
+                </div>
+
                 <button onclick="submitForm()"
                     class="w-full bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-200 font-medium">
                     Send Message
@@ -63,17 +82,24 @@
             card.className = 'bg-white rounded-lg shadow-md p-6 space-y-3';
             card.innerHTML = `
                 <div class="flex justify-between items-start">
-                    <h3 class="font-semibold text-lg">${response.name}</h3>
+                    <h3 class="font-semibold text-lg">${response?.name || ''}</h3>
                     <button onclick="deleteResponse(${index})" class="text-red-500 hover:text-red-700">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                             <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
                         </svg>
                     </button>
                 </div>
-                <p class="text-sm text-gray-600">${response.email}</p>
-                <p class="text-sm font-medium">${response.subject}</p>
-                <p class="text-sm text-gray-700">${response.message}</p>
-                ${response.phone ? `<p class="text-sm text-gray-600">${response.phone}</p>` : ''}
+                <p class="text-sm text-gray-600">${response?.email || ''}</p>
+                <p class="text-sm font-medium">${response?.subject || ''}</p>
+                <p class="text-sm text-gray-700">${response?.message || ''}</p>
+                ${response?.phone ? `<p class="text-sm text-gray-600">${response?.phone}</p>` : ''}
+                ${response?.imageUrl ? `
+                    <div class="mt-3">
+                        <img src="${response?.imageUrl}"
+                             alt="Attached image"
+                             class="rounded-lg max-h-48 w-full object-cover"/>
+                    </div>
+                ` : ''}
             `;
             document.getElementById('responseGrid').prepend(card);
         }
@@ -87,14 +113,21 @@
 
         async function submitForm() {
             const textarea = document.getElementById('contactDetails');
+            const imageInput = document.getElementById('imageUpload');
+            const formData = new FormData();
+
+            // Add the text data
+            formData.append('message', textarea.value);
+
+            // Add the image if one was selected
+            if (imageInput.files.length > 0) {
+                formData.append('image', imageInput.files[0]);
+            }
 
             try {
                 const response = await fetch('/contact', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(textarea.value)
+                    body: formData
                 });
 
                 const result = await response.json();
@@ -108,13 +141,28 @@
                     // Update UI
                     loadResponses();
 
-                    alert('Message sent successfully!');
+                    // Reset form
                     textarea.value = '';
+                    imageInput.value = '';
+                    document.getElementById('imagePreview').classList.add('hidden');
+                    alert('Message sent successfully!');
                 } else {
                     alert('Error: ' + JSON.stringify(result));
                 }
             } catch (error) {
                 alert('Error submitting form: ' + error.message);
+            }
+        }
+
+        let uploadedImageUrl = null;
+
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                // Show preview
+                const preview = document.getElementById('imagePreview');
+                preview.src = URL.createObjectURL(file);
+                preview.classList.remove('hidden');
             }
         }
     </script>

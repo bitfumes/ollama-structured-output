@@ -1,4 +1,7 @@
 import json
+import os
+import shutil
+import tempfile
 from typing import Optional
 
 from fastapi import FastAPI, HTTPException, Request
@@ -20,7 +23,7 @@ class ContactForm(BaseModel):
     phone: Optional[str] = None
 
 
-def parse_contact_info(text: str):
+def parse_contact_info(text: str, image: str):
     """Use Ollama to extract structured contact information from text."""
 
     system_prompt = """Extract contact information from the text and return it in JSON format with these fields:
@@ -33,13 +36,20 @@ def parse_contact_info(text: str):
     }
     Only include these fields and ensure the output is valid JSON."""
 
+    model = "llama3.2-vision" if image else "llama3.2"
+    messages = [
+        {"role": "system", "content": system_prompt},
+    ]
+
+    if image:
+        messages.append({"role": "user", "images": [image]})
+    else:
+        messages.append({"role": "user", "content": text})
+    print(model)
     try:
         response = chat(
-            model='llama3.1',
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": text}
-            ],
+            model=model,
+            messages=messages,
             stream=False,
             format={
                 "type": "object",
@@ -71,6 +81,15 @@ async def root(request: Request):
 
 @app.post("/contact")
 async def contact(request: Request):
-    text = await request.json()
-    contact_data = parse_contact_info(text)
+    data = await request.form()
+    message = data.get("message")
+    image = data.get("image")
+    image_path = None
+    if image:
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as tmp:
+            # Write the uploaded file content to our temporary file
+            shutil.copyfileobj(image.file, tmp)
+            # Get the absolute path
+            image_path = os.path.abspath(tmp.name)
+    contact_data = parse_contact_info(message, image_path)
     return contact_data
