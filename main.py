@@ -26,14 +26,7 @@ class ContactForm(BaseModel):
 def parse_contact_info(text: str, image: str):
     """Use Ollama to extract structured contact information from text."""
 
-    system_prompt = """Extract contact information from the text and return it in JSON format with these fields:
-    {
-        "name": "full name",
-        "email": "email address",
-        "subject": "subject or purpose",
-        "message": "main message content",
-        "phone": "phone number if present, or null"
-    }
+    system_prompt = """Extract contact information from the text and return it in JSON format.
     Only include these fields and ensure the output is valid JSON."""
 
     model = "llama3.2-vision" if image else "llama3.2"
@@ -51,17 +44,7 @@ def parse_contact_info(text: str, image: str):
             model=model,
             messages=messages,
             stream=False,
-            format={
-                "type": "object",
-                "properties": {
-                    "name": {"type": "string"},
-                    "email": {"type": "string"},
-                    "subject": {"type": "string"},
-                    "message": {"type": "string"},
-                    "phone": {"type": "number"}
-                },
-                "required": ["name", "email", "subject", "message", "phone"]
-            },
+            format=ContactForm.model_json_schema(),
         )
 
         # Parse the response text as JSON

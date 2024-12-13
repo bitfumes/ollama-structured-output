@@ -47,9 +47,19 @@
                     </div>
                 </div>
 
-                <button onclick="submitForm()"
-                    class="w-full bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-200 font-medium">
-                    Send Message
+                <button onclick="submitForm()" id="submitButton"
+                    class="w-full bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-200 font-medium flex items-center justify-center">
+                    <span id="buttonText">Send Message</span>
+                    <svg id="loadingSpinner"
+                        class="hidden animate-spin ml-2 h-5 w-5 text-white"
+                        xmlns="http://www.w3.org/2000/svg" fill="none"
+                        viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10"
+                            stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                        </path>
+                    </svg>
                 </button>
             </div>
         </div>
@@ -112,19 +122,29 @@
         }
 
         async function submitForm() {
+            // Get button elements
+            const button = document.getElementById('submitButton');
+            const buttonText = document.getElementById('buttonText');
+            const loadingSpinner = document.getElementById('loadingSpinner');
+
+            // Disable button and show loading state
+            button.disabled = true;
+            buttonText.textContent = 'Sending...';
+            loadingSpinner.classList.remove('hidden');
+
             const textarea = document.getElementById('contactDetails');
             const imageInput = document.getElementById('imageUpload');
             const formData = new FormData();
 
-            // Add the text data
-            formData.append('message', textarea.value);
-
-            // Add the image if one was selected
-            if (imageInput.files.length > 0) {
-                formData.append('image', imageInput.files[0]);
-            }
-
             try {
+                // Add the text data
+                formData.append('message', textarea.value);
+
+                // Add the image if one was selected
+                if (imageInput.files.length > 0) {
+                    formData.append('image', imageInput.files[0]);
+                }
+
                 const response = await fetch('/contact', {
                     method: 'POST',
                     body: formData
@@ -147,10 +167,15 @@
                     document.getElementById('imagePreview').classList.add('hidden');
                     alert('Message sent successfully!');
                 } else {
-                    alert('Error: ' + JSON.stringify(result));
+                    throw new Error(JSON.stringify(result));
                 }
             } catch (error) {
                 alert('Error submitting form: ' + error.message);
+            } finally {
+                // Reset button state
+                button.disabled = false;
+                buttonText.textContent = 'Send Message';
+                loadingSpinner.classList.add('hidden');
             }
         }
 
